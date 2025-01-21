@@ -3,10 +3,12 @@ import { ptBR } from 'date-fns/locale'
 import { Download } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { z } from 'zod'
 
 import { ExpenseChart } from '@/components/expenses/expense-chart'
-import { ExpenseForm } from '@/components/expenses/expense-form'
+import {
+  ExpenseForm,
+  type ExpenseFormValues,
+} from '@/components/expenses/expense-form'
 import { ExpenseList } from '@/components/expenses/expense-list'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,15 +22,6 @@ import { useAuth } from '@/contexts/auth-context'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import type { Expense } from '@/types/expense'
-
-const formSchema = z.object({
-  id: z.string().optional(),
-  description: z.string(),
-  amount: z.string(),
-  date: z.date(),
-})
-
-type ExpenseFormValues = z.infer<typeof formSchema>
 
 interface ChartDataItem {
   month: string
@@ -100,7 +93,7 @@ export function HomePage() {
 
       if (!user) throw new Error('Usuário não encontrado')
 
-      const amount = Number(values.amount) / 100
+      const amount = Number(values.amount)
 
       const { error } = await supabase.from('expenses').insert({
         description: values.description,
@@ -137,7 +130,7 @@ export function HomePage() {
 
       if (!user) throw new Error('Usuário não encontrado')
 
-      const amount = Number(values.amount) / 100
+      const amount = Number(values.amount)
 
       const expenseData: Expense = {
         id,

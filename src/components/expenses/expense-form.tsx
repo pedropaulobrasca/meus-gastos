@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+import { NumericFormat } from 'react-number-format'
 import { z } from 'zod'
 
 import type { Expense } from '@/types/expense'
@@ -23,6 +24,7 @@ const formSchema = z.object({
     .max(100, 'A descrição deve ter no máximo 100 caracteres'),
   amount: z
     .string()
+    .regex(/^\d+(\.\d{0,2})?$/, 'O valor deve ter no máximo 2 casas decimais')
     .refine((value) => !isNaN(Number(value)) && Number(value) > 0, {
       message: 'O valor deve ser maior que zero',
     }),
@@ -34,8 +36,10 @@ interface ExpenseFormProps {
   onSubmit: (values: z.infer<typeof formSchema>) => Promise<void>
 }
 
+export type ExpenseFormValues = z.infer<typeof formSchema>
+
 export function ExpenseForm({ expense, onSubmit }: ExpenseFormProps) {
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: expense
       ? {
@@ -50,21 +54,6 @@ export function ExpenseForm({ expense, onSubmit }: ExpenseFormProps) {
           date: new Date(),
         },
   })
-
-  // Formatar o valor como moeda
-  const formatCurrency = (value: string) => {
-    const numbers = value.replace(/\D/g, '')
-    const numberValue = Number(numbers) / 100
-    return numberValue.toLocaleString('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-  }
-
-  // Limpar a formatação da moeda
-  const cleanCurrency = (value: string) => {
-    return value.replace(/\D/g, '') || '0'
-  }
 
   return (
     <Form {...form}>
@@ -90,19 +79,22 @@ export function ExpenseForm({ expense, onSubmit }: ExpenseFormProps) {
         <FormField
           control={form.control}
           name="amount"
-          render={({ field: { value, onChange, ...field } }) => (
+          render={({ field }) => (
             <FormItem>
               <FormLabel>Valor</FormLabel>
               <FormControl>
-                <Input
-                  {...field}
-                  inputMode="numeric"
-                  placeholder="R$ 0,00"
-                  value={formatCurrency(value)}
-                  onChange={(e) => {
-                    const cleaned = cleanCurrency(e.target.value)
-                    onChange(cleaned)
+                <NumericFormat
+                  customInput={Input}
+                  value={field.value}
+                  onValueChange={(values) => {
+                    field.onChange(values.value)
                   }}
+                  decimalScale={2}
+                  fixedDecimalScale
+                  decimalSeparator="."
+                  thousandSeparator=","
+                  prefix="R$ "
+                  placeholder="Digite o valor"
                 />
               </FormControl>
               <FormMessage />
