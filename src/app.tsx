@@ -1,14 +1,34 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
+import { useAuth } from './contexts/auth-context'
 import { AuthPage } from './pages/auth'
 import { HomePage } from './pages/home'
 
-const isAuthenticated = false // Temporário, depois vamos implementar a autenticação real
-
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  if (!isAuthenticated) {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return <div>Carregando...</div>
+  }
+
+  if (!user) {
     return <Navigate to="/auth" replace />
   }
+
+  return children
+}
+
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return <div>Carregando...</div>
+  }
+
+  if (user) {
+    return <Navigate to="/" replace />
+  }
+
   return children
 }
 
@@ -23,7 +43,14 @@ function App() {
           </PrivateRoute>
         }
       />
-      <Route path="/auth" element={<AuthPage />} />
+      <Route
+        path="/auth"
+        element={
+          <PublicRoute>
+            <AuthPage />
+          </PublicRoute>
+        }
+      />
     </Routes>
   )
 }
