@@ -123,7 +123,7 @@ export function useExpenses() {
 
       return { previousExpenses }
     },
-    onError: (error, variables, context) => {
+    onError: (error, _variables, context) => {
       // Reverter para o valor anterior em caso de erro
       if (context?.previousExpenses) {
         queryClient.setQueryData(['expenses'], context.previousExpenses)
