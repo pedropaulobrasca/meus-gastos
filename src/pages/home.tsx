@@ -5,10 +5,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ExpenseChart } from '@/components/expenses/expense-chart'
-import {
-  ExpenseForm,
-  type ExpenseFormValues,
-} from '@/components/expenses/expense-form'
+import { ExpenseForm } from '@/components/expenses/expense-form'
 import { ExpenseList } from '@/components/expenses/expense-list'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,6 +16,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/auth-context'
+import { useExpenses } from '@/hooks/use-expenses'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import type { Expense } from '@/types/expense'
@@ -29,12 +27,12 @@ interface ChartDataItem {
 }
 
 export function HomePage() {
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { toast } = useToast()
   const navigate = useNavigate()
   const { user, loading } = useAuth()
+  const { expenses, isLoading, addExpense, editExpense, deleteExpense } =
+    useExpenses()
 
   useEffect(() => {
     if (!loading && !user) {
@@ -42,159 +40,17 @@ export function HomePage() {
     }
   }, [user, loading, navigate])
 
-  useEffect(() => {
-    fetchExpenses()
-  }, [])
-
-  // Buscar gastos do usuário
-  async function fetchExpenses() {
-    try {
-      setIsLoading(true)
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) throw new Error('Usuário não encontrado')
-
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false })
-
-      if (error) throw error
-
-      setExpenses(data || [])
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        toast({
-          title: 'Erro ao carregar gastos',
-          description: error.message,
-          variant: 'destructive',
-        })
-      } else {
-        toast({
-          title: 'Erro ao carregar gastos',
-          description: 'Ocorreu um erro desconhecido',
-          variant: 'destructive',
-        })
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Adicionar novo gasto
-  async function handleAddExpense(values: ExpenseFormValues) {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) throw new Error('Usuário não encontrado')
-
-      const amount = Number(values.amount)
-
-      const { error } = await supabase.from('expenses').insert({
-        description: values.description,
-        amount,
-        date: values.date.toISOString(),
-        user_id: user.id,
-      })
-
-      if (error) throw error
-
-      toast({
-        title: 'Sucesso!',
-        description: 'Gasto adicionado com sucesso',
-      })
-
-      fetchExpenses()
-      setIsModalOpen(false)
-    } catch (error: unknown) {
-      toast({
-        title: 'Erro ao adicionar gasto',
-        description:
-          error instanceof Error ? error.message : 'Erro desconhecido',
-        variant: 'destructive',
-      })
-    }
-  }
-
-  // Editar gasto
-  const handleEditExpense = async (id: string, values: ExpenseFormValues) => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) throw new Error('Usuário não encontrado')
-
-      const amount = Number(values.amount)
-
-      const expenseData: Expense = {
-        id,
-        ...values,
-        amount,
-        date: format(values.date, 'yyyy-MM-dd'),
-        user_id: user.id,
-      }
-      const { error } = await supabase
-        .from('expenses')
-        .update({
-          description: expenseData.description,
-          amount: expenseData.amount,
-          date: expenseData.date,
-        })
-        .eq('id', id)
-
-      if (error) throw error
-
-      toast({
-        title: 'Gasto atualizado com sucesso!',
-      })
-
-      fetchExpenses()
-    } catch (error: unknown) {
-      console.error(error)
-      toast({
-        title: 'Erro ao atualizar gasto',
-        variant: 'destructive',
-      })
-    }
-  }
-
   // Wrapper para converter tipos
   const handleEditExpenseWrapper = async (id: string, data: Expense) => {
-    await handleEditExpense(id, {
-      description: data.description,
-      amount: String(data.amount),
-      date: new Date(data.date),
-      id: data.id,
+    editExpense({
+      id,
+      values: {
+        description: data.description,
+        amount: String(data.amount),
+        date: new Date(data.date),
+        id: data.id,
+      },
     })
-  }
-
-  // Excluir gasto
-  async function handleDeleteExpense(id: string) {
-    try {
-      const { error } = await supabase.from('expenses').delete().eq('id', id)
-
-      if (error) throw error
-
-      toast({
-        title: 'Sucesso!',
-        description: 'Gasto excluído com sucesso',
-      })
-
-      fetchExpenses()
-    } catch (error: unknown) {
-      toast({
-        title: 'Erro ao excluir gasto',
-        description:
-          error instanceof Error ? error.message : 'Erro desconhecido',
-        variant: 'destructive',
-      })
-    }
   }
 
   // Baixar relatório
@@ -301,7 +157,12 @@ export function HomePage() {
               <DialogHeader>
                 <DialogTitle>Novo Gasto</DialogTitle>
               </DialogHeader>
-              <ExpenseForm onSubmit={handleAddExpense} />
+              <ExpenseForm
+                onSubmit={async (values) => {
+                  addExpense(values)
+                  setIsModalOpen(false)
+                }}
+              />
             </DialogContent>
           </Dialog>
           <Button
@@ -336,7 +197,7 @@ export function HomePage() {
                 <ExpenseList
                   expenses={expenses}
                   onEdit={handleEditExpenseWrapper}
-                  onDelete={handleDeleteExpense}
+                  onDelete={async (id) => deleteExpense(id)}
                 />
               </>
             ) : (
@@ -352,7 +213,12 @@ export function HomePage() {
                     <DialogHeader>
                       <DialogTitle>Novo Gasto</DialogTitle>
                     </DialogHeader>
-                    <ExpenseForm onSubmit={handleAddExpense} />
+                    <ExpenseForm
+                      onSubmit={async (values) => {
+                        addExpense(values)
+                        setIsModalOpen(false)
+                      }}
+                    />
                   </DialogContent>
                 </Dialog>
               </div>

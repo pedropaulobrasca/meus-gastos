@@ -1,6 +1,7 @@
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Edit, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 
 import { cn } from '@/lib/utils'
 import type { Expense } from '@/types/expense'
@@ -41,6 +42,8 @@ interface ExpenseListProps {
 }
 
 export function ExpenseList({ expenses, onEdit, onDelete }: ExpenseListProps) {
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null)
+
   return (
     <div className="overflow-x-auto rounded-md border">
       <Table>
@@ -71,7 +74,10 @@ export function ExpenseList({ expenses, onEdit, onDelete }: ExpenseListProps) {
               </TableCell>
               <TableCell>
                 <div className="flex items-center justify-end gap-2">
-                  <Dialog>
+                  <Dialog 
+                    open={editingExpenseId === expense.id} 
+                    onOpenChange={(open) => setEditingExpenseId(open ? expense.id : null)}
+                  >
                     <Button
                       variant="ghost"
                       size="icon"
@@ -89,15 +95,16 @@ export function ExpenseList({ expenses, onEdit, onDelete }: ExpenseListProps) {
                       </DialogHeader>
                       <ExpenseForm
                         expense={expense}
-                        onSubmit={(data) =>
-                          onEdit(expense.id, {
+                        onSubmit={async (data) => {
+                          await onEdit(expense.id, {
                             description: data.description,
                             amount: Number(data.amount),
                             date: data.date.toISOString(),
                             id: expense.id,
                             user_id: expense.user_id,
                           })
-                        }
+                          setEditingExpenseId(null)
+                        }}
                       />
                     </DialogContent>
                   </Dialog>
