@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type { ExpenseFormValues } from '@/components/expenses/expense-form'
 import { supabase } from '@/lib/supabase'
+import type { Expense } from '@/types/expense'
 
 import { useToast } from './use-toast'
 
@@ -106,7 +107,7 @@ export function useExpenses() {
       const previousExpenses = queryClient.getQueryData(['expenses'])
 
       // Atualizar otimisticamente
-      queryClient.setQueryData(['expenses'], (old: any[]) => {
+      queryClient.setQueryData(['expenses'], (old: Expense[]) => {
         return old.map((expense) => {
           if (expense.id === id) {
             return {

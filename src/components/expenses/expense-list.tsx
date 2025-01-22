@@ -74,9 +74,11 @@ export function ExpenseList({ expenses, onEdit, onDelete }: ExpenseListProps) {
               </TableCell>
               <TableCell>
                 <div className="flex items-center justify-end gap-2">
-                  <Dialog 
-                    open={editingExpenseId === expense.id} 
-                    onOpenChange={(open) => setEditingExpenseId(open ? expense.id : null)}
+                  <Dialog
+                    open={editingExpenseId === expense.id}
+                    onOpenChange={(open) =>
+                      setEditingExpenseId(open ? expense.id : null)
+                    }
                   >
                     <Button
                       variant="ghost"
